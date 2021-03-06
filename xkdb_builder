@@ -1,7 +1,9 @@
 #!/bin/bash
-
 ##### SET ARCHITECTURE [x86 or ARM] #####
-SYSARCH="x86"
+SYSARCH="x86"                           #
+#########################################
+##### SET SEMESTER [semesterYear] ######
+SEM="spring2021"                       #
 #########################################
 
 if [ $# -ne 2 ]; then
@@ -14,13 +16,39 @@ if [ "$SYSARCH" != "x86" ] && [ "$SYSARCH" != "ARM" ]; then
 	exit 1
 fi
 
-XINU_DIR=$1
+XINU_DIR=$1/xinu-$SEM
 XKDB_DIR=$2
 
 if [ "$SYSARCH" == "x86" ]; then
-	cp $XKDB_DIR/stub/i386-stub.c $XINU_DIR/system/i386-stub.c	
+	touch $XINU_DIR/system/i386-stub.c
+	cp $XKDB_DIR/stub/i386-stub.c $XINU_DIR/system/i386-stub.c
 elif [ "$SYSARCH" == "ARM" ]; then
+	touch $XINU_DIR/system/arm-stub.c
 	cp $XKDB_DIR/stub/arm-stub.c $XINU_DIR/system/arm-stub.c
 fi
 
+cp $XINU_DIR/system/initialize.c $XINU_DIR/system/.initialize.c.bkp
 
+sed -i '/local\tprocess startup(void);\t\/\* Process to finish startup tasks\t\*/a \
+\
+// XKDB extern declarations \
+extern void set_debug_traps(); \
+extern void breakpoint();' $XINU_DIR/system/initialize.c
+
+cp $XINU_DIR/system/initialize.c $XINU_DIR/system/.initialize.c.bkp2
+
+sed -i '/readylist = newqueue();/a \
+\
+	set_debug_traps();\
+	breakpoint();' $XINU_DIR/system/initialize.c
+
+cp $XINU_DIR/compile/Makefile $XINU_DIR/compile/.Makefile.bkp
+
+sed -i '/CFLAGS  = -march=i586 -m32 -fno-builtin -fno-stack-protector -nostdlib -c -Wall -O0 ${DEFS} ${INCLUDE}/c\CFLAGS  = -g -march=i586 -m32 -fno-builtin -fno-stack-protector -nostdlib -c -Wall -O0 ${DEFS} ${INCLUDE}' $XINU_DIR/compile/Makefile
+
+cd $XINU_DIR/compile
+make clean
+make rebuild
+make
+
+echo -e "XKDB has been setup fully! When you want to debug, open a new terminal window, get on to the same xinu instance ($(uname -a)), and then run gdb -x ~/.xkdb."
