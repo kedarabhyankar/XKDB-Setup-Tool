@@ -6,13 +6,28 @@ SYSARCH="x86"                           #
 SEM="spring2021"                       #
 #########################################
 
+if [ $# -eq 1 ] && [ "$1" == "--help" ]; then
+	echo "To run the build tool: ./xkdb_builder [xinu_dir] [xkdb_dir]"
+	echo "To update XKDB: ./xkdb_builder [xkdb_dir] --pull"
+	exit 1
+fi
+
 if [ $# -ne 2 ]; then
 	echo "usage: ./xkdb_builder [xinu_dir] [xkdb_dir]"
+	echo "To update xkdb, run ./xkdb_builder [xkdb_dir] --pull"
 	exit 1
 fi
 
 if [ "$SYSARCH" != "x86" ] && [ "$SYSARCH" != "ARM" ]; then
 	echo "Incorrect Architecture! Must be either x86 or ARM!"
+	exit 1
+fi
+
+if [ "$2" == "--pull" ]; then
+	echo "Updating XKDB in directory $1!"
+	cd $1
+	git pull
+	echo "XKDB has been updated!"
 	exit 1
 fi
 
@@ -52,3 +67,4 @@ make rebuild
 make
 
 echo -e "XKDB has been setup fully! When you want to debug, open a new terminal window, get on to the same xinu instance ($(uname -a)), and then run gdb -x ~/.xkdb."
+
